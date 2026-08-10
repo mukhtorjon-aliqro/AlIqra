@@ -1,0 +1,34 @@
+name: aliqra
+description: "AlIqra - AI-powered Quran, Arabic & Islamic education platform"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Needed for GlobalMaterialLocalizations / GlobalCupertinoLocalizations
+  # (built-in widget text, date pickers, etc. in our 15 languages)
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # State management (locale + auth state kept simple with ChangeNotifier/Provider)
+  provider: ^6.1.2
+
+  # Persist selected language & login session on-device
+  shared_preferences: ^2.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Add app icons / illustrations here later, e.g.:
+  # assets:
+  #   - assets/images/
