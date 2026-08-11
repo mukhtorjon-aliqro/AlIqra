@@ -51,11 +51,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           // Avatar
-          Center(
+          const Center(
             child: CircleAvatar(
               radius: 44,
               backgroundColor: AppColors.lightGreen,
-              child: const Icon(Icons.person, size: 44, color: AppColors.primaryGreen),
+              child: Icon(Icons.person, size: 44, color: AppColors.primaryGreen),
             ),
           ),
           const SizedBox(height: 20),
