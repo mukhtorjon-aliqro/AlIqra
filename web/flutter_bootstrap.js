@@ -13,10 +13,35 @@ if (!_flutter || !_flutter.loader) {
 
 window.__aliqraReportStartupPhase('_flutter.loader available');
 
+const originalHeadAppend = document.head.append.bind(document.head);
+document.head.append = (...nodes) => {
+  for (const node of nodes) {
+    if (node instanceof HTMLScriptElement && node.src.endsWith('/main.dart.js')) {
+      window.__aliqraReportStartupPhase(
+        `main.dart.js requested: ${node.src}`,
+      );
+      node.addEventListener('load', () => {
+        window.__aliqraReportStartupPhase(
+          'main.dart.js loaded; waiting for engine entrypoint callback',
+        );
+      });
+      node.addEventListener('error', () => {
+        window.__aliqraReportStartupError(
+          `main.dart.js failed to load: ${node.src}`,
+          '',
+        );
+      });
+    }
+  }
+  return originalHeadAppend(...nodes);
+};
+
+window.__aliqraReportStartupPhase(
+  'Flutter loader started; service worker disabled',
+);
+
 _flutter.loader.load({
-  serviceWorkerSettings: {
-    serviceWorkerVersion: {{flutter_service_worker_version}},
-  },
+  serviceWorkerSettings: null,
   onEntrypointLoaded: async (engineInitializer) => {
     window.__aliqraReportStartupPhase(
       'engine entrypoint loaded; engine initialization started',
