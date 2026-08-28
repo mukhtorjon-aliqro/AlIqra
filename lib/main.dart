@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'l10n/locale_provider.dart';
 import 'providers/auth_provider.dart';
+import 'startup_diagnostic.dart';
 
 /// -----------------------------------------------------------------------
 /// AlIqra — main.dart
@@ -16,20 +17,30 @@ import 'providers/auth_provider.dart';
 ///   4. Launch the root AlIqraApp widget (see app.dart).
 /// -----------------------------------------------------------------------
 Future<void> main() async {
-  // Required before calling async code (SharedPreferences) pre-runApp.
-  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    reportStartupPhase('Dart main() entered');
 
-  // Load the user's previously chosen language, if any.
-  final localeProvider = LocaleProvider();
-  await localeProvider.loadSavedLocale();
+    // Required before calling async code (SharedPreferences) pre-runApp.
+    WidgetsFlutterBinding.ensureInitialized();
+    reportStartupPhase('Flutter binding initialized');
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider<LocaleProvider>.value(value: localeProvider),
-        ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
-      ],
-      child: const AlIqraApp(),
-    ),
-  );
+    // Load the user's previously chosen language, if any.
+    final localeProvider = LocaleProvider();
+    reportStartupPhase('Loading saved locale from SharedPreferences');
+    await localeProvider.loadSavedLocale();
+    reportStartupPhase('Saved locale loaded; calling runApp');
+
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<LocaleProvider>.value(value: localeProvider),
+          ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
+        ],
+        child: const AlIqraApp(),
+      ),
+    );
+  } catch (error, stackTrace) {
+    reportStartupError(error, stackTrace);
+    Error.throwWithStackTrace(error, stackTrace);
+  }
 }

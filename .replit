@@ -1,3 +1,4 @@
+modules = ["nodejs-24"]
 [nix]
 channel = "stable-25_05"
 
@@ -26,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flutter pub get && flutter build web --release --pwa-strategy=none --base-href=/ && dart run tool/serve_web.dart build/web --port=5000"
+args = "flutter pub get && flutter build web --release --pwa-strategy=none --base-href=/ --no-web-resources-cdn && dart run tool/serve_web.dart build/web --port=5000"
 waitForPort = 5000
 
 [[workflows.workflow]]

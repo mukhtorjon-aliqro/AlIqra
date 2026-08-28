@@ -33,6 +33,73 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <pre id="aliqra-startup-diagnostic"
+       style="position:fixed;inset:12px;z-index:2147483647;margin:0;padding:12px;
+              overflow:auto;background:#fff;color:#8b0000;border:1px solid #8b0000;
+              font:12px/1.45 monospace;white-space:pre-wrap;pointer-events:none">
+AlIqra startup diagnostic
+Phase: HTML loaded; waiting for Flutter bootstrap…
+  </pre>
+  <script>
+    (() => {
+      const panel = document.getElementById('aliqra-startup-diagnostic');
+      let failed = false;
+
+      const format = (value) => {
+        if (value instanceof Error) {
+          return `${value.name}: ${value.message}\n${value.stack || ''}`;
+        }
+        try {
+          return typeof value === 'string' ? value : JSON.stringify(value);
+        } catch (_) {
+          return String(value);
+        }
+      };
+
+      const show = (kind, details) => {
+        failed = true;
+        panel.textContent =
+          `AlIqra startup diagnostic\n${kind}\n\n${format(details)}`;
+      };
+
+      window.__aliqraReportStartupPhase = (phase) => {
+        if (!failed) {
+          panel.textContent =
+            `AlIqra startup diagnostic\nPhase: ${phase}`;
+        }
+      };
+
+      window.__aliqraReportStartupError = (message, stack) => {
+        show('Flutter/Dart startup error', `${message}\n${stack || ''}`);
+      };
+
+      window.addEventListener('error', (event) => {
+        show(
+          'window.onerror',
+          `${event.message || 'Script/resource error'}\n` +
+          `${event.filename || ''}:${event.lineno || 0}:${event.colno || 0}\n` +
+          `${event.error?.stack || ''}`,
+        );
+      });
+
+      window.addEventListener('unhandledrejection', (event) => {
+        show('unhandledrejection', event.reason);
+      });
+
+      window.addEventListener('flutter-first-frame', () => {
+        if (!failed) panel.remove();
+      });
+
+      window.setTimeout(() => {
+        if (!failed && document.getElementById('aliqra-startup-diagnostic')) {
+          show(
+            'Startup timeout after 15 seconds',
+            panel.textContent.replace('AlIqra startup diagnostic\n', ''),
+          );
+        }
+      }, 15000);
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
