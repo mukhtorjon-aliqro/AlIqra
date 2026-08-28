@@ -15,26 +15,89 @@ window.__aliqraReportStartupPhase('_flutter.loader available');
 
 const originalHeadAppend = document.head.append.bind(document.head);
 document.head.append = (...nodes) => {
+  const immediateNodes = [];
+
   for (const node of nodes) {
     if (node instanceof HTMLScriptElement && node.src.endsWith('/main.dart.js')) {
-      window.__aliqraReportStartupPhase(
-        `main.dart.js requested: ${node.src}`,
-      );
-      node.addEventListener('load', () => {
-        window.__aliqraReportStartupPhase(
-          'main.dart.js loaded; waiting for engine entrypoint callback',
-        );
-      });
-      node.addEventListener('error', () => {
-        window.__aliqraReportStartupError(
-          `main.dart.js failed to load: ${node.src}`,
-          '',
-        );
-      });
+      loadMainScriptWithProgress(node);
+    } else {
+      immediateNodes.push(node);
     }
   }
-  return originalHeadAppend(...nodes);
+
+  if (immediateNodes.length > 0) {
+    return originalHeadAppend(...immediateNodes);
+  }
 };
+
+async function loadMainScriptWithProgress(script) {
+  const scriptUrl = script.src;
+
+  try {
+    window.__aliqraReportStartupPhase(
+      `main.dart.js fetch started: ${scriptUrl}`,
+    );
+    const response = await fetch(scriptUrl, {cache: 'no-store'});
+    const contentLength = response.headers.get('content-length') || 'unknown';
+    window.__aliqraReportStartupPhase(
+      `main.dart.js response: HTTP ${response.status}; ` +
+      `content-length ${contentLength}`,
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} while fetching ${scriptUrl}`);
+    }
+
+    const chunks = [];
+    let bytesRead = 0;
+
+    if (response.body) {
+      const reader = response.body.getReader();
+      while (true) {
+        const result = await reader.read();
+        if (result.done) break;
+        chunks.push(result.value);
+        bytesRead += result.value.byteLength;
+        window.__aliqraReportStartupPhase(
+          `main.dart.js downloading: ${bytesRead} decoded bytes received`,
+        );
+      }
+    } else {
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      chunks.push(bytes);
+      bytesRead = bytes.byteLength;
+    }
+
+    window.__aliqraReportStartupPhase(
+      `main.dart.js download complete: ${bytesRead} decoded bytes; executing`,
+    );
+
+    const blobUrl = URL.createObjectURL(
+      new Blob(chunks, {type: 'text/javascript'}),
+    );
+    script.src = blobUrl;
+    script.addEventListener('load', () => {
+      URL.revokeObjectURL(blobUrl);
+      window.__aliqraReportStartupPhase(
+        'main.dart.js executed; waiting for engine entrypoint callback',
+      );
+    });
+    script.addEventListener('error', () => {
+      URL.revokeObjectURL(blobUrl);
+      window.__aliqraReportStartupError(
+        'main.dart.js downloaded but failed during script execution',
+        scriptUrl,
+      );
+    });
+    originalHeadAppend(script);
+  } catch (error) {
+    window.__aliqraReportStartupError(
+      `main.dart.js fetch failed: ${scriptUrl}`,
+      error?.stack || String(error),
+    );
+    throw error;
+  }
+}
 
 window.__aliqraReportStartupPhase(
   'Flutter loader started; service worker disabled',
