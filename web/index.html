@@ -33,6 +33,9 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+    window.__aliqraReportStartupPhase('flutter_bootstrap.js requested');
+  </script>
   <pre id="aliqra-startup-diagnostic"
        style="position:fixed;inset:12px;z-index:2147483647;margin:0;padding:12px;
               overflow:auto;background:#fff;color:#8b0000;border:1px solid #8b0000;
@@ -100,6 +103,7 @@ Phase: HTML loaded; waiting for Flutter bootstrap…
       }, 15000);
     })();
   </script>
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js" async
+          onerror="window.__aliqraReportStartupError('flutter_bootstrap.js failed to load', '')"></script>
 </body>
 </html>
