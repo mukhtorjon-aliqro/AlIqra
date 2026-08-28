@@ -21,13 +21,13 @@ args = "flutter-analyze"
 name = "Start application"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "flutter pub get && flutter run -d web-server --web-hostname 0.0.0.0 --web-port 5000"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter pub get && flutter run -d web-server --release --web-hostname 0.0.0.0 --web-port 5000"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "flutter-analyze"
