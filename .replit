@@ -13,6 +13,10 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "flutter-analyze"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -24,6 +28,17 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow]]
+name = "flutter-analyze"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter analyze"
+
+[workflows.workflow.metadata]
+isValidation = true
 
 [[ports]]
 localPort = 5000
