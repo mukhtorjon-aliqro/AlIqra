@@ -1,5 +1,7 @@
 import 'dart:io';
 
+final _gzipCache = <String, List<int>>{};
+
 const _mimeTypes = <String, String>{
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -79,15 +81,32 @@ Future<void> _serve(HttpRequest request, Directory root) async {
         ? file.path.substring(file.path.lastIndexOf('.')).toLowerCase()
         : '';
     final mimeType = _mimeTypes[extension] ?? 'application/octet-stream';
+    final acceptsGzip =
+        request.headers.value(HttpHeaders.acceptEncodingHeader)?.contains(
+              'gzip',
+            ) ??
+            false;
+    final shouldCompress = acceptsGzip &&
+        const {'.css', '.html', '.js', '.json', '.svg', '.wasm'}
+            .contains(extension);
+    final responseBytes = shouldCompress
+        ? _gzipCache.putIfAbsent(file.path, () => gzip.encode(bytes))
+        : bytes;
 
     request.response
       ..statusCode = HttpStatus.ok
       ..headers.contentType = ContentType.parse(mimeType)
-      ..headers.contentLength = bytes.length
+      ..headers.contentLength = responseBytes.length
       ..headers.set(HttpHeaders.cacheControlHeader, 'no-store');
 
+    if (shouldCompress) {
+      request.response.headers
+        ..set(HttpHeaders.contentEncodingHeader, 'gzip')
+        ..set(HttpHeaders.varyHeader, HttpHeaders.acceptEncodingHeader);
+    }
+
     if (request.method == 'GET') {
-      request.response.add(bytes);
+      request.response.add(responseBytes);
     }
     await request.response.close();
   } on FileSystemException {
