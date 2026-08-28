@@ -1,1 +1,1 @@
-- [Flutter mobile preview mode](flutter-mobile-preview.md) — keep the public workflow in release mode; debug DDC can stall external Android browsers on a white screen.
+- [Flutter mobile preview mode](flutter-mobile-preview.md) — serve a static release build publicly; Flutter web-server modes were unreliable on external Android browsers.
