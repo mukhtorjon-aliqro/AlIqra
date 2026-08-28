@@ -89,6 +89,9 @@ async function loadMainScriptWithProgress(script) {
         scriptUrl,
       );
     });
+    window.__aliqraReportStartupPhase(
+      `main.dart.js script execution started after ${bytesRead} decoded bytes`,
+    );
     originalHeadAppend(script);
   } catch (error) {
     window.__aliqraReportStartupError(
