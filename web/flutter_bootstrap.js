@@ -75,11 +75,14 @@ function installEngineDiagnostics() {
       for (const entry of list.getEntries()) {
         if (
           entry.name.includes('/canvaskit/') ||
-          entry.name.includes('/skwasm')
+          entry.name.includes('/skwasm') ||
+          entry.name.endsWith('/main.dart.js')
         ) {
           window.__aliqraReportStartupPhase(
-            `Engine resource timing completed: ${entry.name}; ` +
-            `${entry.duration.toFixed(0)}ms; ${entry.transferSize || 0} bytes transferred`,
+            `Resource timing completed: ${entry.name}; ` +
+            `${entry.duration.toFixed(0)}ms; transferSize=${entry.transferSize || 0}; ` +
+            `encodedBodySize=${entry.encodedBodySize || 0}; ` +
+            `decodedBodySize=${entry.decodedBodySize || 0}`,
           );
         }
       }
@@ -168,9 +171,21 @@ async function loadMainScriptWithProgress(script) {
     );
     const response = await fetch(scriptUrl, {cache: 'no-store'});
     const contentLength = response.headers.get('content-length') || 'unknown';
+    const contentEncoding =
+      response.headers.get('content-encoding') || 'not exposed/none';
+    const transferEncoding =
+      response.headers.get('transfer-encoding') || 'not exposed/none';
+    const cacheControl =
+      response.headers.get('cache-control') || 'not exposed/none';
     window.__aliqraReportStartupPhase(
-      `main.dart.js response: HTTP ${response.status}; ` +
-      `content-length ${contentLength}`,
+      `main.dart.js response headers received: HTTP ${response.status}; ` +
+      `content-encoding=${contentEncoding}; ` +
+      `content-length=${contentLength}; ` +
+      `transfer-encoding=${transferEncoding}; cache-control=${cacheControl}`,
+    );
+    window.__aliqraReportStartupPhase(
+      'main.dart.js progress reports decoded bytes; compressed byte progress ' +
+      'is available only after completion through Resource Timing',
     );
 
     if (!response.ok) {

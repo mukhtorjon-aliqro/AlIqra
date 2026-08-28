@@ -106,11 +106,11 @@ Phase: HTML loaded; waiting for Flutter bootstrap…
       window.setTimeout(() => {
         if (!failed && document.getElementById('aliqra-startup-diagnostic')) {
           show(
-            'Startup timeout after 120 seconds',
+            'Startup timeout after 180 seconds',
             `Latest phase: ${phases.at(-1) || 'No phase reported'}`,
           );
         }
-      }, 120000);
+      }, 180000);
     })();
   </script>
   <script src="flutter_bootstrap.js" async
