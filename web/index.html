@@ -73,7 +73,7 @@ Phase: HTML loaded; waiting for Flutter bootstrap…
       window.__aliqraReportStartupPhase = (phase) => {
         if (!failed) {
           phases.push(`+${elapsed()}s  ${phase}`);
-          if (phases.length > 14) phases.shift();
+          if (phases.length > 80) phases.shift();
           panel.textContent =
             `AlIqra startup diagnostic\n` +
             `Elapsed: ${elapsed()} seconds\n\n` +
@@ -106,11 +106,11 @@ Phase: HTML loaded; waiting for Flutter bootstrap…
       window.setTimeout(() => {
         if (!failed && document.getElementById('aliqra-startup-diagnostic')) {
           show(
-            'Startup timeout after 60 seconds',
+            'Startup timeout after 120 seconds',
             `Latest phase: ${phases.at(-1) || 'No phase reported'}`,
           );
         }
-      }, 60000);
+      }, 120000);
     })();
   </script>
   <script src="flutter_bootstrap.js" async

@@ -57,17 +57,6 @@ function installEngineDiagnostics() {
           `${response.headers.get('content-length') || 'unknown'} encoded bytes; ` +
           `${url}`,
         );
-        response.clone().arrayBuffer().then((bytes) => {
-          window.__aliqraReportStartupPhase(
-            `Engine resource body completed: ${bytes.byteLength} decoded bytes; ` +
-            `${url}`,
-          );
-        }).catch((error) => {
-          window.__aliqraReportStartupError(
-            `Engine resource body failed: ${url}`,
-            error?.stack || String(error),
-          );
-        });
       }
       return response;
     } catch (error) {
@@ -144,6 +133,15 @@ function installEngineDiagnostics() {
 
 installEngineDiagnostics();
 
+const engineConfig = {
+  canvasKitVariant: 'full',
+  canvasKitForceCpuOnly: true,
+};
+window.__aliqraReportStartupPhase(
+  `CanvasKit JS request starting: ` +
+  `${new URL('canvaskit/canvaskit.js', document.baseURI)}`,
+);
+
 const originalHeadAppend = document.head.append.bind(document.head);
 document.head.append = (...nodes) => {
   const immediateNodes = [];
@@ -181,6 +179,7 @@ async function loadMainScriptWithProgress(script) {
 
     const chunks = [];
     let bytesRead = 0;
+    let lastReportedBytes = 0;
 
     if (response.body) {
       const reader = response.body.getReader();
@@ -189,9 +188,12 @@ async function loadMainScriptWithProgress(script) {
         if (result.done) break;
         chunks.push(result.value);
         bytesRead += result.value.byteLength;
-        window.__aliqraReportStartupPhase(
-          `main.dart.js downloading: ${bytesRead} decoded bytes received`,
-        );
+        if (bytesRead - lastReportedBytes >= 262144) {
+          lastReportedBytes = bytesRead;
+          window.__aliqraReportStartupPhase(
+            `main.dart.js downloading: ${bytesRead} decoded bytes received`,
+          );
+        }
       }
     } else {
       const bytes = new Uint8Array(await response.arrayBuffer());
@@ -239,15 +241,18 @@ window.__aliqraReportStartupPhase(
 
 _flutter.loader.load({
   serviceWorkerSettings: null,
-  config: {
-    canvasKitVariant: 'full',
-    canvasKitForceCpuOnly: true,
-  },
+  config: engineConfig,
   onEntrypointLoaded: async (engineInitializer) => {
     window.__aliqraReportStartupPhase(
       'engine entrypoint loaded; engine initialization started',
     );
-    const appRunner = await engineInitializer.initializeEngine();
+    window.__aliqraReportStartupPhase(
+      'CanvasKit renderer initialization started: full variant, CPU-only',
+    );
+    const appRunner = await engineInitializer.initializeEngine(engineConfig);
+    window.__aliqraReportStartupPhase(
+      'CanvasKit renderer initialization completed',
+    );
     window.__aliqraReportStartupPhase('engine initialization completed');
     window.__aliqraReportStartupPhase('app runner started');
     await appRunner.runApp();
