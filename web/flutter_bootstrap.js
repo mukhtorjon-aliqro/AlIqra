@@ -13,6 +13,137 @@ if (!_flutter || !_flutter.loader) {
 
 window.__aliqraReportStartupPhase('_flutter.loader available');
 
+function installEngineDiagnostics() {
+  const canvas = document.createElement('canvas');
+  let webGl1 = false;
+  let webGl2 = false;
+
+  try {
+    webGl2 = Boolean(canvas.getContext('webgl2'));
+    webGl1 = Boolean(
+      canvas.getContext('webgl') || canvas.getContext('experimental-webgl'),
+    );
+  } catch (error) {
+    window.__aliqraReportStartupError(
+      'WebGL capability check failed',
+      error?.stack || String(error),
+    );
+  }
+
+  window.__aliqraReportStartupPhase(
+    `Browser capabilities: WebAssembly=${typeof WebAssembly !== 'undefined'}; ` +
+    `compileStreaming=${typeof WebAssembly?.compileStreaming === 'function'}; ` +
+    `WebGL1=${webGl1}; WebGL2=${webGl2}; UA=${navigator.userAgent}`,
+  );
+
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async (...args) => {
+    const input = args[0];
+    const url = typeof input === 'string' ? input : input?.url || String(input);
+    const isEngineResource =
+      url.includes('/canvaskit/') || url.includes('/skwasm');
+
+    if (isEngineResource) {
+      window.__aliqraReportStartupPhase(
+        `Engine resource request started: ${url}`,
+      );
+    }
+
+    try {
+      const response = await originalFetch(...args);
+      if (isEngineResource) {
+        window.__aliqraReportStartupPhase(
+          `Engine resource response: HTTP ${response.status}; ` +
+          `${response.headers.get('content-length') || 'unknown'} encoded bytes; ` +
+          `${url}`,
+        );
+        response.clone().arrayBuffer().then((bytes) => {
+          window.__aliqraReportStartupPhase(
+            `Engine resource body completed: ${bytes.byteLength} decoded bytes; ` +
+            `${url}`,
+          );
+        }).catch((error) => {
+          window.__aliqraReportStartupError(
+            `Engine resource body failed: ${url}`,
+            error?.stack || String(error),
+          );
+        });
+      }
+      return response;
+    } catch (error) {
+      if (isEngineResource) {
+        window.__aliqraReportStartupError(
+          `Engine resource request failed: ${url}`,
+          error?.stack || String(error),
+        );
+      }
+      throw error;
+    }
+  };
+
+  if (typeof PerformanceObserver === 'function') {
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (
+          entry.name.includes('/canvaskit/') ||
+          entry.name.includes('/skwasm')
+        ) {
+          window.__aliqraReportStartupPhase(
+            `Engine resource timing completed: ${entry.name}; ` +
+            `${entry.duration.toFixed(0)}ms; ${entry.transferSize || 0} bytes transferred`,
+          );
+        }
+      }
+    });
+    observer.observe({type: 'resource', buffered: true});
+  }
+
+  const originalCompileStreaming =
+    WebAssembly.compileStreaming?.bind(WebAssembly);
+  if (originalCompileStreaming) {
+    WebAssembly.compileStreaming = async (source) => {
+      window.__aliqraReportStartupPhase(
+        'CanvasKit WASM compileStreaming started',
+      );
+      try {
+        const module = await originalCompileStreaming(source);
+        window.__aliqraReportStartupPhase(
+          'CanvasKit WASM compileStreaming completed',
+        );
+        return module;
+      } catch (error) {
+        window.__aliqraReportStartupError(
+          'CanvasKit WASM compileStreaming failed',
+          error?.stack || String(error),
+        );
+        throw error;
+      }
+    };
+  }
+
+  const originalInstantiate = WebAssembly.instantiate.bind(WebAssembly);
+  WebAssembly.instantiate = async (...args) => {
+    window.__aliqraReportStartupPhase(
+      'CanvasKit WASM instantiate started',
+    );
+    try {
+      const instance = await originalInstantiate(...args);
+      window.__aliqraReportStartupPhase(
+        'CanvasKit WASM instantiate completed',
+      );
+      return instance;
+    } catch (error) {
+      window.__aliqraReportStartupError(
+        'CanvasKit WASM instantiate failed',
+        error?.stack || String(error),
+      );
+      throw error;
+    }
+  };
+}
+
+installEngineDiagnostics();
+
 const originalHeadAppend = document.head.append.bind(document.head);
 document.head.append = (...nodes) => {
   const immediateNodes = [];
@@ -108,6 +239,10 @@ window.__aliqraReportStartupPhase(
 
 _flutter.loader.load({
   serviceWorkerSettings: null,
+  config: {
+    canvasKitVariant: 'full',
+    canvasKitForceCpuOnly: true,
+  },
   onEntrypointLoaded: async (engineInitializer) => {
     window.__aliqraReportStartupPhase(
       'engine entrypoint loaded; engine initialization started',
